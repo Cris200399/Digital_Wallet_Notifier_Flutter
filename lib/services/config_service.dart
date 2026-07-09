@@ -22,10 +22,22 @@ class AppConfig {
 /// Horario de escucha. Si [activo] es false, escucha 24/7.
 class Horario {
   final bool activo;
-  final int inicio; // hora 0-23
-  final int fin; // hora 0-23
+  final int horaInicio;
+  final int minInicio;
+  final int horaFin;
+  final int minFin;
 
-  Horario({required this.activo, required this.inicio, required this.fin});
+  Horario({
+    required this.activo,
+    required this.horaInicio,
+    required this.minInicio,
+    required this.horaFin,
+    required this.minFin,
+  });
+
+  int get inicioEnMinutos => horaInicio * 60 + minInicio;
+
+  int get finEnMinutos => horaFin * 60 + minFin;
 }
 
 /// Lee y escribe la configuración en SharedPreferences.
@@ -63,27 +75,32 @@ class ConfigService {
     await p.reload();
     return Horario(
       activo: p.getBool(Constants.kHorarioActivo) ?? false,
-      inicio: p.getInt(Constants.kHoraInicio) ?? 8,
-      fin: p.getInt(Constants.kHoraFin) ?? 22,
+      horaInicio: p.getInt(Constants.kHoraInicio) ?? 8,
+      minInicio: p.getInt(Constants.kMinInicio) ?? 0,
+      horaFin: p.getInt(Constants.kHoraFin) ?? 22,
+      minFin: p.getInt(Constants.kMinFin) ?? 0,
     );
   }
 
   static Future<void> setHorario(Horario h) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(Constants.kHorarioActivo, h.activo);
-    await p.setInt(Constants.kHoraInicio, h.inicio);
-    await p.setInt(Constants.kHoraFin, h.fin);
+    await p.setInt(Constants.kHoraInicio, h.horaInicio);
+    await p.setInt(Constants.kMinInicio, h.minInicio);
+    await p.setInt(Constants.kHoraFin, h.horaFin);
+    await p.setInt(Constants.kMinFin, h.minFin);
   }
 
-  /// Indica si [now] cae dentro del horario configurado.
-  /// Soporta rangos que cruzan medianoche (ej. 22 a 6).
   static Future<bool> dentroDeHorario(DateTime now) async {
     final h = await getHorario();
     if (!h.activo) return true;
-    final hora = now.hour;
-    if (h.inicio <= h.fin) {
-      return hora >= h.inicio && hora < h.fin;
+    final ahora = now.hour * 60 + now.minute; // minutos del día actual
+    final inicio = h.inicioEnMinutos;
+    final fin = h.finEnMinutos;
+    if (inicio <= fin) {
+      return ahora >= inicio && ahora < fin;
     }
-    return hora >= h.inicio || hora < h.fin;
+    // rango que cruza medianoche (ej. 22:30 a 03:15)
+    return ahora >= inicio || ahora < fin;
   }
 }

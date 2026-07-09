@@ -197,7 +197,14 @@ class _UserScreenState extends State<UserScreen> {
     final h = _horario;
     if (h == null || !h.activo) return "Activo las 24 horas";
     String dos(int n) => n.toString().padLeft(2, '0');
-    return "Activo de ${dos(h.inicio)}:00 a ${dos(h.fin)}:00";
+    String format(int hour, int minute) {
+      final ampm = hour < 12 ? "AM" : "PM";
+      int h12 = hour % 12;
+      if (h12 == 0) h12 = 12;
+      return "${dos(h12)}:${dos(minute)} $ampm";
+    }
+
+    return "Activo de ${format(h.horaInicio, h.minInicio)} a ${format(h.horaFin, h.minFin)}";
   }
 
   Widget _botonPrincipal() {

@@ -24,5 +24,7 @@ class Constants {
   static const String kHorarioActivo = "cfg_horario_activo";
   static const String kHoraInicio = "cfg_hora_inicio";
   static const String kHoraFin = "cfg_hora_fin";
+  static const String kMinInicio = "cfg_min_inicio";
+  static const String kMinFin = "cfg_min_fin";
   static const String kHistory = "cfg_history";
 }
