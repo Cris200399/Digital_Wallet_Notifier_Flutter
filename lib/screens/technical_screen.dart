@@ -77,7 +77,7 @@ class _TechnicalScreenState extends State<TechnicalScreen> {
 
   Future<void> _probarEnvio() async {
     const textoFalso =
-        "Cristopher Ron* te envió un pago por S/ 0.1. El cód. de seguridad es: 200";
+        "Texto de prueba de envío.";
     await procesarPago(
       pkg: Constants.monitoredPackages.first,
       cuerpo: textoFalso,

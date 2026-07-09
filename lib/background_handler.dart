@@ -39,7 +39,9 @@ Future<void> procesarPago({
 
   // 2. Descarta notificaciones de grupo/resumen (sin monto)
   if (cuerpo.isEmpty || !cuerpo.contains(Constants.monedaMarcador)) {
-    await LogService.log("Descartada (vacía o sin '${Constants.monedaMarcador}').");
+    await LogService.log(
+      "Descartada (vacía o sin '${Constants.monedaMarcador}').",
+    );
     return;
   }
 
@@ -57,37 +59,51 @@ Future<void> procesarPago({
     return;
   }
 
-  // 5. Parsing del monto
-  final match = RegExp(r'S/\s*([\d.]+)').firstMatch(cuerpo);
+  // 5. Parsing del monto y el nombre
+  final match = RegExp(r'S/\s*(\d+(?:\.\d+)?)').firstMatch(cuerpo);
   final monto = match != null ? "S/ ${match.group(1)}" : "—";
-  final hora = _formatFecha(now);
+  final nombre = extraerNombre(cuerpo);
+  final hora = _formatDate(now);
 
-  // 6. Registrar en historial local
+  // 6. Registrar en historial local (ahora con nombre)
   await HistoryService.add(
-    PagoRegistro(monto: monto, detalle: cuerpo, timestamp: timestamp),
+    PagoRegistro(
+      monto: monto,
+      nombre: nombre,
+      detalle: cuerpo,
+      timestamp: timestamp,
+    ),
   );
 
   // 7. Construir y enviar el mensaje
   final detalle = _escapeHtml(cuerpo);
-  final mensaje = "<b>Nuevo pago recibido</b>\n\n"
+  final mensaje =
+      "<b>Nuevo pago recibido</b>\n\n"
       "💰 <b>Monto:</b> $monto\n"
       "🕐 <b>Hora:</b> $hora\n"
       "📝 <b>Detalle:</b> $detalle";
 
-  await TelegramService.enviar(
+  await TelegramService.send(
     botToken: cfg.botToken!,
     chatIds: cfg.chatIds,
-    mensaje: mensaje,
+    messages: mensaje,
   );
 }
 
-String _formatFecha(DateTime dt) {
+String _formatDate(DateTime dt) {
   String dos(int n) => n.toString().padLeft(2, '0');
+  final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+  final period = dt.hour >= 12 ? 'PM' : 'AM';
   return "${dos(dt.day)}/${dos(dt.month)}/${dt.year} "
-      "${dos(dt.hour)}:${dos(dt.minute)}";
+      "${dos(hour12)}:${dos(dt.minute)} $period";
 }
 
-String _escapeHtml(String t) => t
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+String extraerNombre(String texto) {
+  // Captura lo que va antes de "te envió"
+  final m = RegExp(r'(?:Yape!\s*)?(.+?)\s+te envió').firstMatch(texto);
+  if (m == null) return "Desconocido";
+  return m.group(1)!.trim();
+}
+
+String _escapeHtml(String t) =>
+    t.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');

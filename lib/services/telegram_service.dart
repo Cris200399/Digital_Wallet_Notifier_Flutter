@@ -5,20 +5,20 @@ import 'log_service.dart';
 /// Envía mensajes a Telegram vía la API de bots, con reintentos ante
 /// fallos de red (ej. "Failed host lookup" cuando el equipo aún no tiene DNS).
 class TelegramService {
-  static Future<bool> enviar({
+  static Future<bool> send({
     required String botToken,
     required List<String> chatIds,
-    required String mensaje,
+    required String messages,
   }) async {
     bool todoOk = true;
     for (final id in chatIds) {
-      final ok = await _enviarA(botToken, id, mensaje);
+      final ok = await _sendTo(botToken, id, messages);
       if (!ok) todoOk = false;
     }
     return todoOk;
   }
 
-  static Future<bool> _enviarA(
+  static Future<bool> _sendTo(
       String botToken,
       String chatId,
       String mensaje,

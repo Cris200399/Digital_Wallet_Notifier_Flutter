@@ -45,7 +45,6 @@ class _UserScreenState extends State<UserScreen> {
     _techTimer = null;
   }
 
-
   Future<void> _cargarEstado() async {
     final permiso = await NotificationService.hasPermission();
     final activo = await NotificationService.isRunning();
@@ -280,8 +279,14 @@ class _UserScreenState extends State<UserScreen> {
   Widget _filaPago(PagoRegistro p) {
     final f = p.fecha;
     String dos(int n) => n.toString().padLeft(2, '0');
+
+    // Hora en formato 12h
+    final h24 = f.hour;
+    final ampm = h24 < 12 ? "AM" : "PM";
+    int h12 = h24 % 12;
+    if (h12 == 0) h12 = 12;
     final fechaTexto =
-        "${dos(f.day)}/${dos(f.month)} · ${dos(f.hour)}:${dos(f.minute)}";
+        "${dos(f.day)}/${dos(f.month)} · ${dos(h12)}:${dos(f.minute)} $ampm";
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -291,12 +296,29 @@ class _UserScreenState extends State<UserScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  p.monto,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      p.monto,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (p.nombre.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          p.nombre,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(

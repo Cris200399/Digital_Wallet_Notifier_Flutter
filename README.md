@@ -1,4 +1,4 @@
-# yape_notifier
+# Digital Wallet Notifier
 
 A new Flutter project.
 

@@ -5,23 +5,27 @@ import '../constants.dart';
 /// Un pago capturado, guardado localmente en el dispositivo.
 class PagoRegistro {
   final String monto;
+  final String nombre;
   final String detalle;
-  final int timestamp; // milisegundos desde epoch
+  final int timestamp;
 
   PagoRegistro({
     required this.monto,
+    required this.nombre,
     required this.detalle,
     required this.timestamp,
   });
 
   Map<String, dynamic> toJson() => {
     'monto': monto,
+    'nombre': nombre,
     'detalle': detalle,
     'ts': timestamp,
   };
 
   factory PagoRegistro.fromJson(Map<String, dynamic> j) => PagoRegistro(
     monto: (j['monto'] ?? '') as String,
+    nombre: (j['nombre'] ?? '') as String,
     detalle: (j['detalle'] ?? '') as String,
     timestamp: (j['ts'] ?? 0) as int,
   );
