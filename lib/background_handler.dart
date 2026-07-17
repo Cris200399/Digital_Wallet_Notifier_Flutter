@@ -37,11 +37,19 @@ Future<void> procesarPago({
   // 1. Filtro por app de origen
   if (!Constants.monitoredPackages.contains(pkg)) return;
 
-  // 2. Descarta notificaciones de grupo/resumen (sin monto)
+  // 2. Descarta notificaciones vacías o sin monto
   if (cuerpo.isEmpty || !cuerpo.contains(Constants.monedaMarcador)) {
     await LogService.log(
       "Descartada (vacía o sin '${Constants.monedaMarcador}').",
     );
+    return;
+  }
+
+  // Para notificaciones de Interbank, exige que sea un Plin recibido
+  // Si el paquete requiere una palabra clave específica, verifícala
+  final claveRequerida = Constants.palabraClavePorPaquete[pkg];
+  if (claveRequerida != null && !cuerpo.contains(claveRequerida)) {
+    await LogService.log("$pkg: no contiene '$claveRequerida', ignorada.");
     return;
   }
 
@@ -70,6 +78,8 @@ Future<void> procesarPago({
     PagoRegistro(
       monto: monto,
       nombre: nombre,
+      origen: Constants.origenDe(pkg),
+      // 👈 deriva del paquete
       detalle: cuerpo,
       timestamp: timestamp,
     ),
@@ -80,8 +90,10 @@ Future<void> procesarPago({
   final mensaje =
       "<b>Nuevo pago recibido</b>\n\n"
       "💰 <b>Monto:</b> $monto\n"
+      "🏦 <b>Vía:</b> ${Constants.origenDe(pkg)}\n"
+      "👤 <b>De:</b> ${_escapeHtml(nombre)}\n"
       "🕐 <b>Hora:</b> $hora\n"
-      "📝 <b>Detalle:</b> $detalle";
+      "📝 <b>Detalle:</b> ${detalle}";
 
   await TelegramService.send(
     botToken: cfg.botToken!,
@@ -99,8 +111,10 @@ String _formatDate(DateTime dt) {
 }
 
 String extraerNombre(String texto) {
-  // Captura lo que va antes de "te envió"
-  final m = RegExp(r'(?:Yape!\s*)?(.+?)\s+te envió').firstMatch(texto);
+  // Cubre "te envió" (Yape) y "te ha plineado" (Plin/Interbank)
+  final m = RegExp(
+    r'(?:Yape!\s*)?(.+?)\s+te (?:envió|ha plineado)',
+  ).firstMatch(texto);
   if (m == null) return "Desconocido";
   return m.group(1)!.trim();
 }

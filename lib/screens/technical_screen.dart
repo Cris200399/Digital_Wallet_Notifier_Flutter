@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yape_notifier/screens/stats_screen.dart';
 import '../constants.dart';
 import '../background_handler.dart';
 import '../services/backend_service.dart';
@@ -136,7 +137,7 @@ class _TechnicalScreenState extends State<TechnicalScreen> {
   }
 
   Future<void> _probarEnvio() async {
-    const textoFalso = "Texto de prueba de envío. S/xx";
+    const textoFalso = "Monto yapeado de prueba. S/xx";
     await procesarPago(
       pkg: Constants.monitoredPackages.first,
       cuerpo: textoFalso,
@@ -257,6 +258,15 @@ class _TechnicalScreenState extends State<TechnicalScreen> {
               icon: const Icon(Icons.description_outlined),
               label: const Text('Ver logs'),
             ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StatsScreen()),
+              ),
+              icon: const Icon(Icons.bar_chart_outlined),
+              label: const Text('Ver estadísticas'),
+            ),
           ]),
         ],
       ),
@@ -332,25 +342,4 @@ class _TechnicalScreenState extends State<TechnicalScreen> {
     );
   }
 
-  Widget _dropdownHora(String label, int valor, ValueChanged<int> onChanged) {
-    return InputDecorator(
-      decoration: InputDecoration(labelText: label),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: valor,
-          isExpanded: true,
-          items: [
-            for (int h = 0; h < 24; h++)
-              DropdownMenuItem(
-                value: h,
-                child: Text("${h.toString().padLeft(2, '0')}:00"),
-              ),
-          ],
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
-      ),
-    );
-  }
 }

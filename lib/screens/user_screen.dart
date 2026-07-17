@@ -4,13 +4,9 @@ import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import '../services/config_service.dart';
 import '../services/history_service.dart';
+import '../widgets/pago_card.dart';
 import 'technical_login_screen.dart';
 
-/// Pantalla principal, visible para el dueño del comercio.
-/// Minimalista: estado del servicio, un botón para encender/apagar,
-/// y el historial de los últimos pagos capturados.
-///
-/// Acceso oculto a la parte técnica: mantener presionado el título.
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
 
@@ -117,27 +113,40 @@ class _UserScreenState extends State<UserScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: GestureDetector(
-          onTapDown: (_) => _startTechLongPress(),
-          onTapUp: (_) => _cancelTechLongPress(),
-          onTapCancel: _cancelTechLongPress,
-          child: const Text('Digital Wallet Notifier'),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFEDF1F6), Color(0xFFDDE4EC)],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _cargarEstado,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            _tarjetaEstado(scheme),
-            const SizedBox(height: 20),
-            _botonPrincipal(),
-            const SizedBox(height: 32),
-            _seccionHistorial(),
-          ],
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          foregroundColor: const Color(0xFF17171A),
+          title: GestureDetector(
+            onTapDown: (_) => _startTechLongPress(),
+            onTapUp: (_) => _cancelTechLongPress(),
+            onTapCancel: _cancelTechLongPress,
+            child: const Text('Digital Wallet Notifier'),
+          ),
+        ),
+        body: RefreshIndicator(
+          onRefresh: _cargarEstado,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            children: [
+              _tarjetaEstado(scheme),
+              const SizedBox(height: 20),
+              _botonPrincipal(),
+              const SizedBox(height: 32),
+              _seccionHistorial(),
+            ],
+          ),
         ),
       ),
     );
@@ -257,7 +266,7 @@ class _UserScreenState extends State<UserScreen> {
                       ),
                     ),
                     onDismissed: (_) => _borrarItem(i),
-                    child: _filaPago(_historial[i]),
+                    child: PagoCard(pago: _historial[i]),
                   ),
                   if (i < _historial.length - 1)
                     const Divider(indent: 20, endIndent: 20),
@@ -279,66 +288,6 @@ class _UserScreenState extends State<UserScreen> {
             style: TextStyle(color: Colors.black.withValues(alpha: 0.4)),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _filaPago(PagoRegistro p) {
-    final f = p.fecha;
-    String dos(int n) => n.toString().padLeft(2, '0');
-
-    // Hora en formato 12h
-    final h24 = f.hour;
-    final ampm = h24 < 12 ? "AM" : "PM";
-    int h12 = h24 % 12;
-    if (h12 == 0) h12 = 12;
-    final fechaTexto =
-        "${dos(f.day)}/${dos(f.month)} · ${dos(h12)}:${dos(f.minute)} $ampm";
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      p.monto,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (p.nombre.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          p.nombre,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  fechaTexto,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.black.withValues(alpha: 0.45),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

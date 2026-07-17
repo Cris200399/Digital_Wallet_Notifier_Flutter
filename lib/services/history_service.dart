@@ -6,12 +6,14 @@ import '../constants.dart';
 class PagoRegistro {
   final String monto;
   final String nombre;
+  final String origen; // 👈 nuevo
   final String detalle;
   final int timestamp;
 
   PagoRegistro({
     required this.monto,
     required this.nombre,
+    required this.origen,
     required this.detalle,
     required this.timestamp,
   });
@@ -19,6 +21,7 @@ class PagoRegistro {
   Map<String, dynamic> toJson() => {
     'monto': monto,
     'nombre': nombre,
+    'origen': origen,
     'detalle': detalle,
     'ts': timestamp,
   };
@@ -26,6 +29,8 @@ class PagoRegistro {
   factory PagoRegistro.fromJson(Map<String, dynamic> j) => PagoRegistro(
     monto: (j['monto'] ?? '') as String,
     nombre: (j['nombre'] ?? '') as String,
+    origen: (j['origen'] ?? 'Otro') as String,
+    // fallback para registros viejos
     detalle: (j['detalle'] ?? '') as String,
     timestamp: (j['ts'] ?? 0) as int,
   );
@@ -45,7 +50,9 @@ class HistoryService {
     final result = <PagoRegistro>[];
     for (final s in raw) {
       try {
-        result.add(PagoRegistro.fromJson(jsonDecode(s) as Map<String, dynamic>));
+        result.add(
+          PagoRegistro.fromJson(jsonDecode(s) as Map<String, dynamic>),
+        );
       } catch (_) {
         // ignoramos entradas corruptas
       }

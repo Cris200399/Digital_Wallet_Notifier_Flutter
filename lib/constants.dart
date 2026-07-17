@@ -5,13 +5,28 @@ class Constants {
   // - Producción: https://tu-backend.onrender.com
   // - Emulador Android en local: http://10.0.2.2:3000
   // ==========================================================
-  static const String backendBaseUrl = "https://digital-wallet-notifier-backend.onrender.com";
+  static const String backendBaseUrl =
+      "https://digital-wallet-notifier-backend.onrender.com";
 
   // Paquetes de apps de billetera a monitorear.
   static const List<String> monitoredPackages = [
     "com.bcp.innovacxion.yapeapp", // Yape
+    "pe.com.interbank.mobilebanking", // Plin
     // Agrega aquí otras billeteras si las necesitas.
   ];
+
+  static const Map<String, String> palabraClavePorPaquete = {
+    "com.bcp.innovacxion.yapeapp": "pago", // Yape
+    "pe.com.interbank.mobilebanking": "plineado", // Interbank solo si es Plin
+    // Yape no necesita filtro extra porque su paquete es exclusivo
+  };
+
+  static const Map<String, String> originWord = {
+    "com.bcp.innovacxion.yapeapp": "Yape", // Yape
+    "pe.com.interbank.mobilebanking": "Plin", // Interbank solo si es Plin
+  };
+
+  static String origenDe(String pkg) => originWord[pkg] ?? "Otro";
 
   // Texto que debe contener la notificación para considerarla un pago.
   static const String monedaMarcador = "S/";

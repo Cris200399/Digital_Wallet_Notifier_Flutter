@@ -26,6 +26,7 @@ class TelegramService {
     final url = Uri.parse("https://api.telegram.org/bot$botToken/sendMessage");
 
     for (int intento = 1; intento <= 3; intento++) {
+      final cronometro = Stopwatch()..start();
       try {
         final resp = await http.post(
           url,
@@ -34,22 +35,35 @@ class TelegramService {
             'text': mensaje,
             'parse_mode': 'HTML',
           },
-        ).timeout(const Duration(seconds: 15));
+        ).timeout(const Duration(seconds: 30)); // ⬅️ ahora 30s
+
+        cronometro.stop();
+        final ms = cronometro.elapsedMilliseconds;
 
         if (resp.statusCode == 200) {
-          await LogService.log("Telegram $chatId -> 200 (intento $intento)");
+          await LogService.log(
+              "Telegram $chatId -> 200 en ${ms}ms (intento $intento)");
           return true;
         }
 
         await LogService.log(
-          "Telegram $chatId -> ${resp.statusCode}: ${resp.body}",
-        );
-        // Error del API (no de red). Solo reintentamos si es rate limit (429).
+            "Telegram $chatId -> ${resp.statusCode} en ${ms}ms: ${resp.body}");
         if (resp.statusCode != 429) return false;
+
+      } on TimeoutException {
+        cronometro.stop();
+        await LogService.log(
+            "Timeout $chatId tras ${cronometro.elapsedMilliseconds}ms "
+                "(intento $intento): no se reintenta (posible envío ya realizado)");
+        return false;
+
       } catch (e) {
-        await LogService.log("Error de red $chatId (intento $intento): $e");
+        cronometro.stop();
+        await LogService.log(
+            "Error de red $chatId tras ${cronometro.elapsedMilliseconds}ms "
+                "(intento $intento): $e");
       }
-      // Backoff antes de reintentar
+
       await Future.delayed(Duration(seconds: intento * 2));
     }
     return false;
