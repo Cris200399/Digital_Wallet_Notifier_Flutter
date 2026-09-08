@@ -16,9 +16,8 @@ class Constants {
   ];
 
   static const Map<String, String> palabraClavePorPaquete = {
-    "com.bcp.innovacxion.yapeapp": "pago", // Yape
+    "com.bcp.innovacxion.yapeapp": "un pago por", // Yape
     "pe.com.interbank.mobilebanking": "plineado", // Interbank solo si es Plin
-    // Yape no necesita filtro extra porque su paquete es exclusivo
   };
 
   static const Map<String, String> originWord = {

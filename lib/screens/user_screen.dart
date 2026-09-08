@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import '../services/notification_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../services/config_service.dart';
 import '../services/history_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/pago_card.dart';
 import 'technical_login_screen.dart';
 
@@ -18,17 +23,159 @@ class _UserScreenState extends State<UserScreen> {
   bool _permiso = false;
   bool _activo = false;
   bool _cargando = true;
+  bool _bateriaExenta = false;
   Horario? _horario;
   List<PagoRegistro> _historial = const [];
 
   Timer? _techTimer;
-  final Duration _techLongPressDuration = Duration(seconds: 5);
+  final Duration _techLongPressDuration = const Duration(seconds: 5);
 
   @override
   void initState() {
     super.initState();
     NotificationService.initialize();
     _cargarEstado();
+  }
+
+  Future<void> _cargarEstado() async {
+    final permiso = await NotificationService.hasPermission();
+    final activo = await NotificationService.isRunning();
+    final horario = await ConfigService.getHorario();
+    final historial = await HistoryService.load();
+    final bateriaExenta = await Permission.ignoreBatteryOptimizations.isGranted;
+
+    if (!mounted) return;
+    setState(() {
+      _permiso = permiso;
+      _activo = activo;
+      _horario = horario;
+      _historial = historial;
+      _bateriaExenta = bateriaExenta;
+      _cargando = false;
+    });
+  }
+
+  Future<void> _abrirAjustesBateria() async {
+    final status = await Permission.ignoreBatteryOptimizations.request();
+    if (status.isDenied) {
+      await openAppSettings();
+    }
+    _cargarEstado();
+  }
+
+  Future<void> _abrirAutoInicio() async {
+    if (!Platform.isAndroid) return;
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    final manufacturer = androidInfo.manufacturer.toLowerCase();
+
+    // Intentar abrir pantallas específicas por fabricante
+    bool lanzado = false;
+    if (manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco")) {
+      lanzado = await launchUrl(
+        Uri.parse("intent://#Intent;action=miui.intent.action.OP_AUTO_START;end"),
+      ).catchError((_) => false);
+    } else if (manufacturer.contains("huawei") || manufacturer.contains("honor")) {
+      lanzado = await launchUrl(
+        Uri.parse("intent://#Intent;action=com.huawei.systemmanager.action.OP_AUTO_START;end"),
+      ).catchError((_) => false);
+    } else if (manufacturer.contains("oppo") || manufacturer.contains("realme")) {
+      lanzado = await launchUrl(
+        Uri.parse("intent://#Intent;action=com.coloros.safecenter;end"),
+      ).catchError((_) => false);
+    } else if (manufacturer.contains("vivo")) {
+      lanzado = await launchUrl(
+        Uri.parse("intent://#Intent;action=com.iqoo.secure;end"),
+      ).catchError((_) => false);
+    }
+
+    // Fallback si no es de esas marcas o falla la intención
+    if (!lanzado) {
+      await openAppSettings();
+    }
+  }
+
+  void _mostrarAjustesSegundoPlano() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Ajustes de Ejecución 24/7",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Configura estos permisos para asegurar que la app no sea cerrada por el sistema:",
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    leading: Icon(
+                      _permiso ? Icons.check_circle : Icons.warning_amber_rounded,
+                      color: _permiso ? Colors.green : Colors.orange,
+                    ),
+                    title: const Text("Acceso a Notificaciones"),
+                    subtitle: const Text("Requerido para detectar los avisos de pago"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await NotificationService.openSettings;
+                      await _cargarEstado();
+                      setModalState(() {});
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: Icon(
+                      _bateriaExenta ? Icons.check_circle : Icons.battery_alert,
+                      color: _bateriaExenta ? Colors.green : Colors.orange,
+                    ),
+                    title: const Text("Sin Optimización de Batería"),
+                    subtitle: const Text("Evita que Android suspenda la app"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await _abrirAjustesBateria();
+                      setModalState(() {});
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.autorenew, color: Colors.blue),
+                    title: const Text("Permiso de Autoinicio"),
+                    subtitle: const Text("Permite reiniciar el servicio al encender el móvil"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await _abrirAutoInicio();
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _startTechLongPress() {
@@ -39,21 +186,6 @@ class _UserScreenState extends State<UserScreen> {
   void _cancelTechLongPress([_]) {
     _techTimer?.cancel();
     _techTimer = null;
-  }
-
-  Future<void> _cargarEstado() async {
-    final permiso = await NotificationService.hasPermission();
-    final activo = await NotificationService.isRunning();
-    final horario = await ConfigService.getHorario();
-    final historial = await HistoryService.load();
-    if (!mounted) return;
-    setState(() {
-      _permiso = permiso;
-      _activo = activo;
-      _horario = horario;
-      _historial = historial;
-      _cargando = false;
-    });
   }
 
   Future<void> _toggle() async {
@@ -77,17 +209,13 @@ class _UserScreenState extends State<UserScreen> {
       context,
       MaterialPageRoute(builder: (_) => const TechnicalLoginScreen()),
     );
-    // Al volver, recargamos por si cambió la config/horario.
     _cargarEstado();
   }
 
   Future<void> _borrarItem(int index) async {
     final eliminado = _historial[index];
-    // Actualiza la UI de inmediato
     setState(() => _historial.removeAt(index));
-    // Persiste el cambio
     await HistoryService.removeAt(index);
-    // Ofrece deshacer
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -133,6 +261,13 @@ class _UserScreenState extends State<UserScreen> {
             onTapCancel: _cancelTechLongPress,
             child: const Text('Digital Wallet Notifier'),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: "Configuración de Ejecución",
+              onPressed: _mostrarAjustesSegundoPlano,
+            ),
+          ],
         ),
         body: RefreshIndicator(
           onRefresh: _cargarEstado,
@@ -140,6 +275,8 @@ class _UserScreenState extends State<UserScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
+              if (!_bateriaExenta || !_permiso) _permissionBanner(),
+              const SizedBox(height: 20),
               _tarjetaEstado(scheme),
               const SizedBox(height: 20),
               _botonPrincipal(),
@@ -147,6 +284,40 @@ class _UserScreenState extends State<UserScreen> {
               _seccionHistorial(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _permissionBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Configuración recomendada",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Para garantizar la recepción ininterrumpida de pagos, verifica los permisos en segundo plano.",
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: _mostrarAjustesSegundoPlano,
+              icon: const Icon(Icons.settings_suggest),
+              label: const Text("Configurar Segundo Plano"),
+            ),
+          ],
         ),
       ),
     );
@@ -190,7 +361,7 @@ class _UserScreenState extends State<UserScreen> {
                     subtitulo,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.black.withValues(alpha: 0.55),
+                      color: Colors.black.withOpacity(0.55),
                     ),
                   ),
                 ],
@@ -240,7 +411,7 @@ class _UserScreenState extends State<UserScreen> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.black.withValues(alpha: 0.5),
+              color: Colors.black.withOpacity(0.5),
             ),
           ),
         ),
@@ -249,7 +420,6 @@ class _UserScreenState extends State<UserScreen> {
         else
           Card(
             clipBehavior: Clip.antiAlias,
-            // para que el fondo rojo respete las esquinas
             child: Column(
               children: [
                 for (int i = 0; i < _historial.length; i++) ...[
@@ -285,7 +455,7 @@ class _UserScreenState extends State<UserScreen> {
         child: Center(
           child: Text(
             "Aún no se han capturado pagos",
-            style: TextStyle(color: Colors.black.withValues(alpha: 0.4)),
+            style: TextStyle(color: Colors.black.withOpacity(0.4)),
           ),
         ),
       ),
