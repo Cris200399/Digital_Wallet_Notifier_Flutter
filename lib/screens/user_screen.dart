@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/config_service.dart';
 import '../services/history_service.dart';
 import '../services/notification_service.dart';
+import '../widgets/battery_warning_widget.dart';
 import '../widgets/pago_card.dart';
 import 'technical_login_screen.dart';
 
@@ -71,15 +72,23 @@ class _UserScreenState extends State<UserScreen> {
 
     // Intentar abrir pantallas específicas por fabricante
     bool lanzado = false;
-    if (manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco")) {
+    if (manufacturer.contains("xiaomi") ||
+        manufacturer.contains("redmi") ||
+        manufacturer.contains("poco")) {
       lanzado = await launchUrl(
-        Uri.parse("intent://#Intent;action=miui.intent.action.OP_AUTO_START;end"),
+        Uri.parse(
+          "intent://#Intent;action=miui.intent.action.OP_AUTO_START;end",
+        ),
       ).catchError((_) => false);
-    } else if (manufacturer.contains("huawei") || manufacturer.contains("honor")) {
+    } else if (manufacturer.contains("huawei") ||
+        manufacturer.contains("honor")) {
       lanzado = await launchUrl(
-        Uri.parse("intent://#Intent;action=com.huawei.systemmanager.action.OP_AUTO_START;end"),
+        Uri.parse(
+          "intent://#Intent;action=com.huawei.systemmanager.action.OP_AUTO_START;end",
+        ),
       ).catchError((_) => false);
-    } else if (manufacturer.contains("oppo") || manufacturer.contains("realme")) {
+    } else if (manufacturer.contains("oppo") ||
+        manufacturer.contains("realme")) {
       lanzado = await launchUrl(
         Uri.parse("intent://#Intent;action=com.coloros.safecenter;end"),
       ).catchError((_) => false);
@@ -116,7 +125,10 @@ class _UserScreenState extends State<UserScreen> {
                     children: [
                       const Text(
                         "Ajustes de Ejecución 24/7",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -132,11 +144,15 @@ class _UserScreenState extends State<UserScreen> {
                   const SizedBox(height: 20),
                   ListTile(
                     leading: Icon(
-                      _permiso ? Icons.check_circle : Icons.warning_amber_rounded,
+                      _permiso
+                          ? Icons.check_circle
+                          : Icons.warning_amber_rounded,
                       color: _permiso ? Colors.green : Colors.orange,
                     ),
                     title: const Text("Acceso a Notificaciones"),
-                    subtitle: const Text("Requerido para detectar los avisos de pago"),
+                    subtitle: const Text(
+                      "Requerido para detectar los avisos de pago",
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       await NotificationService.openSettings;
@@ -162,7 +178,9 @@ class _UserScreenState extends State<UserScreen> {
                   ListTile(
                     leading: const Icon(Icons.autorenew, color: Colors.blue),
                     title: const Text("Permiso de Autoinicio"),
-                    subtitle: const Text("Permite reiniciar el servicio al encender el móvil"),
+                    subtitle: const Text(
+                      "Permite reiniciar el servicio al encender el móvil",
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       await _abrirAutoInicio();
@@ -275,7 +293,7 @@ class _UserScreenState extends State<UserScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
-              if (!_bateriaExenta || !_permiso) _permissionBanner(),
+              const BatteryWarningWidget(),
               const SizedBox(height: 20),
               _tarjetaEstado(scheme),
               const SizedBox(height: 20),
