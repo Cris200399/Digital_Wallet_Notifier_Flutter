@@ -3,6 +3,9 @@ import '../background_handler.dart';
 
 /// Envuelve las llamadas al plugin de listener de notificaciones.
 class NotificationService {
+  /// Flag para pausar/reanudar la escucha sin detener el servicio
+  static bool _pausado = false;
+
   static Future<bool> hasPermission() async {
     return (await NotificationsListener.hasPermission) ?? false;
   }
@@ -18,12 +21,30 @@ class NotificationService {
 
   /// Enciende el servicio. Devuelve true si quedó activo.
   static Future<bool> start() async {
+    _pausado = false;
     return (await NotificationsListener.startService()) ?? false;
   }
 
-  /// Apaga el servicio. Devuelve true si quedó detenido.
+  /// PAUSA la escucha sin detener el servicio.
+  /// El listener sigue corriendo pero ignora los pagos.
+  static Future<bool> pause() async {
+    _pausado = true;
+    return true;
+  }
+
+  /// Reanuda la escucha.
+  static Future<bool> resume() async {
+    _pausado = false;
+    return true;
+  }
+
+  /// Verifica si está pausado.
+  static bool estaPausado() => _pausado;
+
+  /// NUNCA llamar a stopService() - eso rompe todo
+  /// En su lugar usa pause()
   static Future<bool> stop() async {
-    return (await NotificationsListener.stopService()) ?? false;
+    return pause();
   }
 
   static void openSettings() {

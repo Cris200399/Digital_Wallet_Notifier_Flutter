@@ -41,6 +41,7 @@ class _UserScreenState extends State<UserScreen> {
   Future<void> _cargarEstado() async {
     final permiso = await NotificationService.hasPermission();
     final activo = await NotificationService.isRunning();
+    final pausado = NotificationService.estaPausado();
     final horario = await ConfigService.getHorario();
     final historial = await HistoryService.load();
     final bateriaExenta = await Permission.ignoreBatteryOptimizations.isGranted;
@@ -48,7 +49,7 @@ class _UserScreenState extends State<UserScreen> {
     if (!mounted) return;
     setState(() {
       _permiso = permiso;
-      _activo = activo;
+      _activo = activo && !pausado;
       _horario = horario;
       _historial = historial;
       _bateriaExenta = bateriaExenta;
@@ -213,8 +214,8 @@ class _UserScreenState extends State<UserScreen> {
     }
     setState(() => _cargando = true);
     final nuevoEstado = _activo
-        ? !(await NotificationService.stop())
-        : await NotificationService.start();
+        ? !(await NotificationService.pause())
+        : await NotificationService.resume();
     if (!mounted) return;
     setState(() {
       _activo = nuevoEstado;

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
+import 'package:yape_notifier/services/notification_service.dart';
 import 'constants.dart';
 import 'services/config_service.dart';
 import 'services/log_service.dart';
@@ -32,6 +33,11 @@ Future<void> procesarPago({
   required String cuerpo,
   required int timestamp,
 }) async {
+
+  if (NotificationService.estaPausado()) {
+    await LogService.log("Servicio pausado, ignorando notificación.");
+    return;
+  }
   await LogService.log("Notif. pkg=$pkg | text='$cuerpo'");
 
   // 1. Filtro por app de origen
